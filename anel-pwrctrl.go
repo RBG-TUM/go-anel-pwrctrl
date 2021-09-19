@@ -70,7 +70,7 @@ func (c *PwrCtrl) updateStatus() error {
 		return err
 	}
 	state := strings.Split(string(body), ";")
-	if state[58] != "end" {
+	if len(state) < 58 || state[58] != "end" {
 		return errors.New("unexpected response from device")
 	}
 	c.state = state
