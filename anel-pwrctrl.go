@@ -21,12 +21,28 @@ func New(addr string, auth string) PwrCtrl {
 }
 
 func (c *PwrCtrl) TurnOn(outletIndex int) error {
+	return c.turn(outletIndex, true)
+}
+
+func (c *PwrCtrl) TurnOff(outletIndex int) error {
+	return c.turn(outletIndex, false)
+}
+
+func (c *PwrCtrl) turn(outletIndex int, targetOn bool) error {
 	on, err := c.IsOn(outletIndex)
 	if err != nil {
 		return err
 	}
-	if !on {
-		//todo
+	if on != targetOn {
+		request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/ctrl.htm", c.addr), strings.NewReader(fmt.Sprintf("F%d=S", outletIndex)))
+		if err != nil {
+			return err
+		}
+		request.Header.Add("Authorization", fmt.Sprintf("Basic %s", c.auth))
+		_, err = http.DefaultClient.Do(request)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
