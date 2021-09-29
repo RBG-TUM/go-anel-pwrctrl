@@ -2,7 +2,6 @@ package go_anel_pwrctrl
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -71,7 +70,7 @@ func (c *PwrCtrl) updateStatus() error {
 	}
 	state := strings.Split(string(body), ";")
 	if len(state) < 58 || state[58] != "end" {
-		return errors.New("unexpected response from device")
+		return fmt.Errorf("%v: %v", err, state)
 	}
 	c.state = state
 	return nil
