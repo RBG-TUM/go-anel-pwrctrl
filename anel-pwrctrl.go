@@ -8,21 +8,25 @@ import (
 	"strings"
 )
 
+const indexOffset = 21 // index of first power outlet in status response
+
 type PwrCtrl struct {
 	addr  string
 	auth  string
 	state []string // see readme for documentation
 }
 
-//New creates an instance of PwrCtrl. Auth should be provided in the like "user:password"
+//New creates an instance of PwrCtrl. Auth should be provided like "user:password"
 func New(addr string, auth string) PwrCtrl {
 	return PwrCtrl{addr: addr, auth: base64.StdEncoding.EncodeToString([]byte(auth))}
 }
 
+// TurnOn powers on the outlet with the index outletIndex
 func (c *PwrCtrl) TurnOn(outletIndex int) error {
 	return c.turn(outletIndex, true)
 }
 
+// TurnOff powers off the outlet with the index outletIndex
 func (c *PwrCtrl) TurnOff(outletIndex int) error {
 	return c.turn(outletIndex, false)
 }
@@ -46,12 +50,16 @@ func (c *PwrCtrl) turn(outletIndex int, targetOn bool) error {
 	return nil
 }
 
-func (c *PwrCtrl) IsOn(index int) (bool, error) {
+// IsOn returns whether the outlet with index outletIndex is on or not.
+func (c *PwrCtrl) IsOn(outletIndex int) (bool, error) {
 	err := c.updateStatus()
 	if err != nil {
 		return false, err
 	}
-	return c.state[20+index] == "1", nil
+	if len(c.state) < indexOffset+outletIndex {
+		return false, fmt.Errorf("outlet index %d is out of range", outletIndex)
+	}
+	return c.state[20+outletIndex] == "1", nil
 }
 
 func (c *PwrCtrl) updateStatus() error {
@@ -64,14 +72,15 @@ func (c *PwrCtrl) updateStatus() error {
 	if err != nil {
 		return err
 	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code %d", resp.StatusCode)
+	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 	state := strings.Split(string(body), ";")
-	if len(state) < 58 || state[58] != "end" {
-		return fmt.Errorf("%v: %v", err, state)
-	}
+	// todo: perhaps sanity check response
 	c.state = state
 	return nil
 }
